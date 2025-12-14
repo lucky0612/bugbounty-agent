@@ -3,7 +3,7 @@ import { spawn } from 'child_process'
 import fs from 'fs/promises'
 import path from 'path'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     console.log('🚀 API: Real scan request received')
     const { repoUrl } = await request.json()
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
             }))
           } catch (error) {
             console.error('❌ API: Failed to read/parse report:', error)
-            console.error('❌ API: Error details:', error.message)
+            console.error('❌ API: Error details:', (error as Error).message)
             console.error('📤 API: Raw scanner output:', output.substring(0, 500))
             
             // Return scanner output instead
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
               timestamp: new Date().toISOString(),
               terminal_output: output,
               message: 'Scanner ran but could not read report file',
-              error_details: error.message,
+              error_details: (error as Error).message,
               summary: {
                 total_findings: 0,
                 critical: 0,
@@ -244,3 +244,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+

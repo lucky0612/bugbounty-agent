@@ -1,0 +1,154 @@
+id: bugbounty-security-scan
+namespace: security
+
+description: Autonomous security scanning with AI-powered decision making
+
+inputs:
+  - id: repo_url
+    type: STRING
+    defaults: "https://github.com/user/vulnerable-app"
+  
+  - id: scan_depth
+    type: SELECT
+    values:
+      - QUICK
+      - STANDARD
+      - DEEP
+    defaults: STANDARD
+
+tasks:
+  # Step 1: Clone target repository
+  - id: clone_repo
+    type: io.kestra.plugin.git.Clone
+    url: "{{ inputs.repo_url }}"
+    branch: main
+
+  # Step 2: Run security scanner
+  - id: run_scanner
+    type: io.kestra.plugin.scripts.node.Script
+    docker:
+      image: node:20
+    beforeCommands:
+      - npm install -g /app/scanner
+    script: |
+      const BugBountyAgent = require('/app/scanner/security-scanner.js');
+      const agent = new BugBountyAgent('{{ outputs.clone_repo.directory }}');
+      const report = await agent.scan();
+      console.log(JSON.stringify(report));
+
+  # Step 3: AI Agent - Summarize findings and decide actions
+  # ⭐ CRITICAL FOR KESTRA AI AGENT AWARD ⭐
+  - id: ai_agent_analysis
+    type: io.kestra.plugin.ai.agent.AIAgent
+    model:
+      provider: ollama
+      model: deepseek-r1:14b
+      endpoint: http://localhost:11434
+    prompt: |
+      You are a senior security analyst reviewing this vulnerability scan report:
+      
+      {{ outputs.run_scanner.outputFiles['scan-report.json'] }}
+      
+      **Your Tasks:**
+      1. Summarize the TOP 3 most critical vulnerabilities
+      2. For each, explain:
+         - Why it's critical
+         - Potential business impact
+         - Recommended fix priority (immediate/urgent/soon)
+      3. Decide if any vulnerability requires IMMEDIATE notification (critical auth bypass, data exposure, RCE)
+      4. Generate an executive summary for non-technical stakeholders
+      
+      Output format:
+      {
+        "executive_summary": "2-3 sentence overview",
+        "top_vulnerabilities": [
+          {
+            "title": "...",
+            "severity": "critical",
+            "impact": "...",
+            "priority": "immediate",
+            "requires_notification": true/false
+          }
+        ],
+        "recommended_actions": ["action 1", "action 2"],
+        "overall_risk_score": 1-10,
+        "decision": {
+          "action": "BLOCK_DEPLOYMENT|WARN_AND_CONTINUE|APPROVE",
+          "reasoning": "explanation"
+        }
+      }
+    outputFormat: json
+
+  # Step 4: Decision logic based on AI agent
+  - id: check_critical_findings
+    type: io.kestra.core.tasks.flows.If
+    condition: "{{ outputs.ai_agent_analysis.overall_risk_score >= 8 }}"
+    then:
+      - id: send_critical_alert
+        type: io.kestra.plugin.notifications.slack.SlackIncomingWebhook
+        url: "{{ secret('SLACK_WEBHOOK_URL') }}"
+        payload: |
+          {
+            "text": "🚨 CRITICAL Security Findings Detected!",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Risk Score:* {{ outputs.ai_agent_analysis.overall_risk_score }}/10\n\n{{ outputs.ai_agent_analysis.executive_summary }}"
+                }
+              }
+            ]
+          }
+    else:
+      - id: log_standard_findings
+        type: io.kestra.core.tasks.log.Log
+        message: "Standard security scan completed. No critical issues requiring immediate attention."
+
+  # Step 5: Store results in database
+  - id: store_results
+    type: io.kestra.plugin.jdbc.postgresql.Query
+    url: jdbc:postgresql://localhost:5432/bugbounty
+    username: postgres
+    password: "{{ secret('DB_PASSWORD') }}"
+    sql: |
+      INSERT INTO scan_results (
+        repo_url,
+        scan_timestamp,
+        total_findings,
+        critical_count,
+        risk_score,
+        ai_summary,
+        full_report
+      ) VALUES (
+        '{{ inputs.repo_url }}',
+        NOW(),
+        {{ outputs.run_scanner.summary.total_findings }},
+        {{ outputs.run_scanner.summary.critical }},
+        {{ outputs.ai_agent_analysis.overall_risk_score }},
+        '{{ outputs.ai_agent_analysis.executive_summary }}',
+        '{{ outputs.run_scanner }}'::jsonb
+      )
+
+  # Step 6: Generate dashboard update
+  - id: trigger_dashboard_update
+    type: io.kestra.plugin.core.http.Request
+    uri: "https://your-dashboard.vercel.app/api/scan-complete"
+    method: POST
+    contentType: application/json
+    body: |
+      {
+        "scan_id": "{{ flow.id }}",
+        "timestamp": "{{ execution.startDate }}",
+        "summary": {{ outputs.ai_agent_analysis }}
+      }
+
+# Schedule continuous scanning
+triggers:
+  - id: daily_scan
+    type: io.kestra.core.models.triggers.types.Schedule
+    cron: "0 2 * * *"  # 2 AM daily
+
+  - id: on_commit
+    type: io.kestra.core.models.triggers.types.Webhook
+    key: github-webhook-secret

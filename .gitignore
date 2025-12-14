@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build outputs
+.next/
+dist/
+build/
+*.log
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Scanner outputs
+scanner/scan-report.json
+scanner/*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp

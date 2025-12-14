@@ -1,0 +1,25 @@
+{
+  "name": "bugbounty-agent-scanner",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Autonomous security scanner using Cline, SAST tools, and local LLM",
+  "main": "security-scanner.js",
+  "scripts": {
+    "scan": "node security-scanner.js"
+  },
+  "dependencies": {
+    "ollama": "^0.5.0"
+  },
+  "bin": {
+    "bugbounty-scan": "./security-scanner.js"
+  },
+  "keywords": [
+    "security",
+    "vulnerability",
+    "scanner",
+    "ai",
+    "cline"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

@@ -1,0 +1,35 @@
+{
+  "name": "BugBountyAgent Security Scanner",
+  "description": "Autonomous security researcher powered by Cline",
+  "model": {
+    "provider": "ollama",
+    "model": "deepseek-r1:14b",
+    "endpoint": "http://localhost:11434"
+  },
+  "scanTargets": [
+    "authentication",
+    "authorization",
+    "input_validation",
+    "sql_injection",
+    "xss",
+    "csrf",
+    "path_traversal",
+    "insecure_deserialization",
+    "api_security",
+    "secrets_exposure"
+  ],
+  "outputFormat": "structured_json",
+  "exploitGeneration": true,
+  "autonomousExploration": {
+    "enabled": true,
+    "maxDepth": 5,
+    "focusAreas": [
+      "routes",
+      "api",
+      "controllers",
+      "models",
+      "auth",
+      "middleware"
+    ]
+  }
+}

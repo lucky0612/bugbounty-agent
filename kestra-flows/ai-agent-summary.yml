@@ -1,0 +1,60 @@
+id: ai-vulnerability-summarizer
+namespace: security
+
+description: Kestra AI Agent Award - Summarize security data and make decisions
+
+inputs:
+  - id: scan_data
+    type: JSON
+
+tasks:
+  # ⭐ THIS IS THE KEY TASK FOR KESTRA AI AGENT AWARD ⭐
+  - id: ai_agent_summarizer
+    type: io.kestra.plugin.ai.agent.AIAgent
+    model:
+      provider: ollama
+      model: deepseek-r1:14b
+      endpoint: http://localhost:11434
+    prompt: |
+      Analyze this security scan data from multiple sources:
+      
+      {{inputs.scan_data}}
+      
+      **Summarization Tasks:**
+      1. Identify patterns across different vulnerability types
+      2. Correlate findings from different tools (Semgrep, Bandit, ESLint)
+      3. Remove duplicate/overlapping findings
+      4. Calculate aggregate risk score
+      
+      **Decision-Making Tasks:**
+      1. Should we block the deployment? (if critical auth/RCE found)
+      2. Which vulnerabilities should developers fix first?
+      3. Are there any false positives to filter out?
+      4. Does this codebase need a manual penetration test?
+      
+      Output structured JSON with your analysis and decisions.
+    outputFormat: json
+    
+  # Agent makes autonomous decision
+  - id: autonomous_decision
+    type: io.kestra.core.tasks.flows.Switch
+    value: "{{ outputs.ai_agent_summarizer.decision.action }}"
+    cases:
+      BLOCK_DEPLOYMENT:
+        - id: block_and_notify
+          type: io.kestra.core.tasks.log.Log
+          message: "🛑 AI Agent Decision: Blocking deployment due to critical findings"
+      
+      WARN_AND_CONTINUE:
+        - id: warn_team
+          type: io.kestra.core.tasks.log.Log
+          message: "⚠️ AI Agent Decision: Proceeding with warnings"
+      
+      APPROVE:
+        - id: approve_deployment
+          type: io.kestra.core.tasks.log.Log
+          message: "✅ AI Agent Decision: Security checks passed"
+
+outputs:
+  - id: ai_summary
+    value: "{{ outputs.ai_agent_summarizer }}"

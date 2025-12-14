@@ -187,7 +187,6 @@ MIT License - See [LICENSE](LICENSE)
 
 ## 🙏 Acknowledgments
 
-- **Anthropic** - Claude & hackathon
 - **Semgrep** - SAST tooling
 - **Vercel** - Hosting platform
 - **OWASP** - Security resources

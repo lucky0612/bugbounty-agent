@@ -169,15 +169,6 @@ node security-scanner-simple.js ../demo-repos/vulnerable-express
 
 ---
 
-## 🤝 Contributing
-
-Built in 4 days for a hackathon! PRs welcome for:
-- Additional vulnerability patterns
-- New SAST tool integrations
-- UI/UX improvements
-- Performance optimizations
-
----
 
 ## 📝 License
 
